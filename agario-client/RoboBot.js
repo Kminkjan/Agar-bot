@@ -19,6 +19,13 @@ client.on('connected', function () { //when we connected to server
 });
 
 function recalculateTarget() { //this is all our example logic
+    var running = false;
+
+    var run_x = [];
+    var run_y = [];
+
+    var enemy_ball = null;
+    var enemy_distance = 0;
     var candidate_ball = null; //first we don't have candidate to eat
     var candidate_distance = 0;
     var my_ball = client.balls[client.my_balls[0]]; //we get our first ball. We don't care if there more then one, its just example.
@@ -29,12 +36,27 @@ function recalculateTarget() { //this is all our example logic
         if (ball.virus) continue; //if ball is a virus (green non edible thing) then we skip it
         if (!ball.visible) continue; //if ball is not on our screen (field of view) then we skip it
         if (ball.mine) continue; //if ball is our ball - then we skip it
-        console.log(getDistanceBetweenBalls(ball, my_ball));
-        if (ball.size / my_ball.size > 0.5 && getDistanceBetweenBalls(ball, my_ball) < ball.size * 2) {
-            client.moveTo(my_ball.x - (ball.x - my_ball.x),my_ball.y - (ball.y - my_ball.y));
-            return;
-        } //if ball is bigger than 50% of our size - then we skip it
+
+
         var distance = getDistanceBetweenBalls(ball, my_ball); //we calculate distances between our ball and candidate
+        if (ball.size / my_ball.size > 0.5) {
+            //if (enemy_distance < ball.size * 2 && (enemy_ball == null || distance < enemy_distance)) {
+            //    enemy_ball = ball;
+            //    enemy_distance = distance;
+            //    running = true;
+            //}
+
+            if (distance < ball.size * 2 ) {
+                run_x.push(my_ball.x - (ball.x - my_ball.x));
+                run_y.push(my_ball.y - (ball.y - my_ball.y));
+                running = true;
+                console.log("running from: " + ball);
+            }
+            continue;
+        } else if (distance < my_ball.size){
+            //client.split()
+        }//if ball is bigger than 50% of our size - then we skip it
+
         if (candidate_ball && distance > candidate_distance) continue; //if we do have some candidate and distance to it smaller, than distance to this ball, we skip it
 
         candidate_ball = ball; //we found new candidate and we record him
@@ -42,8 +64,14 @@ function recalculateTarget() { //this is all our example logic
     }
     if (!candidate_ball) return; //if we didn't find any candidate, we abort. We will come back here in 100ms later
 
-    client.log('closest ' + candidate_ball + ', distance ' + candidate_distance);
-    client.moveTo(candidate_ball.x, candidate_ball.y); //we send move command to move to food's coordinates
+    if (running) {
+        client.log('running ' + enemy_ball + ', distance ' + enemy_distance);
+        client.moveTo(average(run_x),average(run_y));
+        //client.moveTo(my_ball.x - (enemy_ball.x - my_ball.x),my_ball.y - (enemy_ball.y - my_ball.y));
+    } else {
+        client.log('closest ' + candidate_ball + ', distance ' + candidate_distance);
+        client.moveTo(candidate_ball.x, candidate_ball.y); //we send move command to move to food's coordinates
+    }
 }
 
 function getDistanceBetweenBalls(ball_1, ball_2) { //this calculates distance between 2 balls
@@ -61,5 +89,13 @@ client.on('lostMyBalls', function () { //when i lost all my balls
     client.log('destroy spawning');
     setTimeout(function() {
         client.spawn("xFake");
-    }, 5000);
+    }, 2000);
 });
+
+function average(list) {
+    var total = 0;
+    for(i = 0; i < list.length; i++) {
+        total += list[i];
+    }
+    return total / list.length;
+}
