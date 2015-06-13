@@ -10,10 +10,6 @@ var AgarioClient = require('./agario-client.js'); //in your code you should do r
 var client = new AgarioClient('worker'); //create new client and call it "worker" (not nickname)
 var interval_id = 0; //here we will store setInterval's ID
 
-var center_x = 10000;
-var center_y = 10000;
-var orientationToCenter = 0;
-
 client.connect("ws://127.0.0.1:9158/");
 
 client.on('connected', function () { //when we connected to server
@@ -28,7 +24,6 @@ function update() {
 
     /* Sort balls */
     var threats = [], targets = [], virusses = [], foods = [];
-
     for (var ball_id in client.balls) { //we go true all balls we know about
         var ball = client.balls[ball_id];
         if (!ball.visible || ball.mine) continue;
