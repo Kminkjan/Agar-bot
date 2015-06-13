@@ -18,7 +18,11 @@ client.on('connected', function () { //when we connected to server
     interval_id = setInterval(update, 100);
 });
 
-function update() {
+function update() { // TODO check amount of times i've split
+    // TODO dont run in to another cell when fleeing for a big on
+    // TODO or just ignore really big ones for now
+
+    //console.time('update');
     var my_ball = client.balls[client.my_balls[0]];
     if (!my_ball) return;
 
@@ -32,7 +36,7 @@ function update() {
             virusses.push(ball);
             continue;
         }
-        if (ball.size < 15) {
+        if (ball.name == null && ball.size < 30) { // Safety
             foods.push(ball);
             continue;
         }
@@ -56,7 +60,7 @@ function update() {
         var threat = threats[threat_id];
         bad_directions.push(directionTo(my_ball, threat));
         var distance = getDistanceBetweenBalls(threat, my_ball);
-        if (distance < threat.size * 3) {
+        if ((ball.size / my_ball.size > 4 && distance < threat.size * 2.5) || distance < threat.size) {
             run_x.push(my_ball.x - (threat.x - my_ball.x));
             run_y.push(my_ball.y - (threat.y - my_ball.y));
             console.log("running from: " + threat + threat.size + ", direction: " + directionTo(my_ball, threat));
@@ -80,7 +84,7 @@ function update() {
     for (var target_id in targets) {
         var target = targets[target_id];
         distance = getDistanceBetweenBalls(my_ball, target);
-        if ((distance < my_ball.size * 2 && potential_target == null) || distance < distance_target) {
+        if ((distance < my_ball.size * 3 && potential_target == null) || distance < distance_target) {
             potential_target = target;
             distance_target = distance;
         }
@@ -92,7 +96,10 @@ function update() {
         client.moveTo(average(run_x), average(run_y));
     } else if (potential_target) {
         client.moveTo(potential_target.x, potential_target.y);
-        if (distance_target < my_ball.size) { // TODO smart splitting
+        console.log("targetting: " + potential_target + ", distance: " + distance_target
+            + ", split_treshhold: " + my_ball.size * 2);
+        relativeSize = ball.size / my_ball.size;
+        if (distance_target < my_ball.size * 2 && 0.1 > relativeSize < 0.4) { // TODO no biggies in the hood
             client.split();
         }
     } else {
@@ -114,9 +121,14 @@ function update() {
         }
         if (potential_target != null) {
             client.moveTo(potential_target.x, potential_target.y);
+        } else {
+            client.moveTo(10000, 10000);
         }
     }
+    //console.timeEnd('update');
 }
+
+/* #################### HELPER METHODS ####################### */
 
 function getDistanceBetweenBalls(ball_1, ball_2) { //this calculates distance between 2 balls
     return Math.sqrt(Math.pow(ball_1.x - ball_2.x, 2) + Math.pow(ball_2.y - ball_1.y, 2));
@@ -134,19 +146,36 @@ function calculateDirection(x1, y1, x2, y2) {
 
 /**
  * This function checks if the given direction is a safe direction to go to. This is done by checking if the direction
- * is too close near a BAD DIRECTION. In this case the method instantly returns false.The detection range is
- * 160 degrees.
+ * is too close near a BAD DIRECTION. In this case the method instantly returns false.The detection range is 160
+ * degrees when there is one unsafe direction and 90 degrees otherwise..
  * @param list  List of unsafe directions
  * @param direction direction that will be checked
  * @returns {boolean}   true if safe
  */
 function safeDirection(list, direction) {
+    var range = list.length == 1 ? 80 : 45;
     for (var index in list) {
         var degrees = list[index];
-        if (Math.abs(degrees - direction) < 80 || Math.abs(degrees - direction + 360) < 80) return false;
+        if (Math.abs(degrees - direction) < range || Math.abs(degrees - direction + 360) < range) return false;
     }
     return true;
 }
+
+/**
+ * Calulates the average of all the items in a list. Used to calculate the average of multiple points, when the bot
+ * wants to flee from threats.
+ * @param list  The items
+ * @returns {number}    Average of the items
+ */
+function average(list) {
+    var total = 0;
+    for (var i = 0; i < list.length; i++) {
+        total += list[i];
+    }
+    return total / list.length;
+}
+
+/* ################### EVENT FUNCTIONS ################# */
 
 client.on('mineBallDestroy', function (ball_id, reason) { //when my ball destroyed
     if (reason.by) {
@@ -162,10 +191,3 @@ client.on('lostMyBalls', function () { //when i lost all my balls
     }, 2000);
 });
 
-function average(list) {
-    var total = 0;
-    for (var i = 0; i < list.length; i++) {
-        total += list[i];
-    }
-    return total / list.length;
-}
