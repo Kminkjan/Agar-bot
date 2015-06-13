@@ -83,14 +83,12 @@ function update() {
             virusses.push(ball);
             continue;
         }
-
-        if(ball.size < 15) {
+        if (ball.size < 15) {
             foods.push(ball);
             continue;
         }
-
         var relativeSize = ball.size / my_ball.size;
-        if (relativeSize > 1.1) {
+        if (relativeSize > 1.1) { // I can be eaten
             threats.push(ball);
         } else if (relativeSize < 0.7) {
             targets.push(ball);
@@ -130,43 +128,39 @@ function update() {
     for (var target_id in targets) {
         var target = targets[target_id];
         distance = getDistanceBetweenBalls(my_ball, target);
-        if ((distance < my_ball.size*2 && potential_target == null) || distance < distance_target) {
+        if ((distance < my_ball.size * 2 && potential_target == null) || distance < distance_target) {
             potential_target = target;
             distance_target = distance;
         }
     }
 
     /* Do calculated action */
-    if (run_x.length != 0) { // Running from something
+    if (run_x.length != 0) { // Running from something TODO corner and edge detection
+        /* Calculate the average point to run away to and go there */
         client.moveTo(average(run_x), average(run_y));
-    } else if (potential_target)  {
-        console.log("Targeting: " + potential_target + ", direction: " + directionTo(my_ball, potential_target));
+    } else if (potential_target) {
         client.moveTo(potential_target.x, potential_target.y);
-        if (distance_target < my_ball.size) {
+        if (distance_target < my_ball.size) { // TODO smart splitting
             client.split();
         }
     } else {
         // Calculate right direction
         var willpower = calculateDirection(my_ball.x, my_ball.y, 10000, 10000);
 
-
-        // TODO Find closest food in that average direction
+        // TODO Favor going to the center of the map; edges are scary!
         // TODO Find pockets of food
-        // TODO look up general directions of threats and just dont go there
 
         /* Process foods */
         potential_target = null;
         for (var food_id in foods) {
             var food = foods[food_id];
             distance = getDistanceBetweenBalls(my_ball, food);
-            if (validFood(bad_directions, directionTo(my_ball, food)) && (potential_target == null || distance < distance_target)) {
+            if (safeDirection(bad_directions, directionTo(my_ball, food)) && (potential_target == null || distance < distance_target)) {
                 potential_target = food;
                 distance_target = distance;
             }
         }
-
         if (potential_target != null) {
-            console.log("Eating: " + potential_target + ", direction: " + directionTo(my_ball, potential_target));
             client.moveTo(potential_target.x, potential_target.y);
         }
     }
@@ -186,7 +180,15 @@ function calculateDirection(x1, y1, x2, y2) {
     return theta * 180 / Math.PI;
 }
 
-function validFood(list, direction) {
+/**
+ * This function checks if the given direction is a safe direction to go to. This is done by checking if the direction
+ * is too close near a BAD DIRECTION. In this case the method instantly returns false.The detection range is
+ * 160 degrees.
+ * @param list  List of unsafe directions
+ * @param direction direction that will be checked
+ * @returns {boolean}   true if safe
+ */
+function safeDirection(list, direction) {
     for (var index in list) {
         var degrees = list[index];
         if (Math.abs(degrees - direction) < 80 || Math.abs(degrees - direction + 360) < 80) return false;
@@ -210,7 +212,7 @@ client.on('lostMyBalls', function () { //when i lost all my balls
 
 function average(list) {
     var total = 0;
-    for (i = 0; i < list.length; i++) {
+    for (var i = 0; i < list.length; i++) {
         total += list[i];
     }
     return total / list.length;
