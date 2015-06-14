@@ -6,17 +6,34 @@ var region = 'EU-London'; //server region to request
 
 var http = require('http');
 var AgarioClient = require('./agario-client.js'); //in your code you should do require('agario-client')
+var Repeater = require('./repeater.js'); //in your code you should do require('agario-client')
 
 var client = new AgarioClient('worker'); //create new client and call it "worker" (not nickname)
+//var repeater = new  Repeater();
+
 var interval_id = 0; //here we will store setInterval's ID
+var repeaterOn = false;
+
+var canvas = null;
+var WebSocketServer = require('ws').Server
+    , wss = new WebSocketServer({port: 8000});
+wss.on('connection', function(ws) {
+    canvas = ws;
+    console.log("connected, ");
+    ws.on('message', function(message) {
+        console.log('received: %s', message);
+    });
+    ws.send("0,0");
+    start();
+});
 
 client.connect("ws://127.0.0.1:9158/");
 
-client.on('connected', function () { //when we connected to server
+function start() {
     client.log('spawning');
     client.spawn('[xFake]'); //spawning new ball
     interval_id = setInterval(update, 100);
-});
+}
 
 function update() { // TODO check amount of times i've split
     // TODO dont run in to another cell when fleeing for a big on
@@ -120,6 +137,10 @@ function update() { // TODO check amount of times i've split
             }
         }
         if (potential_target != null) {
+            //if (canvas) {
+            //    //canvas.send(potential_target.x + ", " + potential_target.y);
+            //    canvas.send(JSON.stringify([potential_target.x, potential_target.y]));
+            //}
             client.moveTo(potential_target.x, potential_target.y);
         } else {
             client.moveTo(10000, 10000);
