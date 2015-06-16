@@ -42,7 +42,6 @@ function start() {
 function update() { // TODO check amount of times i've split
     // TODO dont run in to another cell when fleeing for a big on
     // TODO or just ignore really big ones for now
-
     //console.time('update');
     var my_ball = client.balls[client.my_balls[0]];
     if (!my_ball) return;
@@ -117,10 +116,14 @@ function update() { // TODO check amount of times i've split
         client.moveTo(average(run_x), average(run_y));
     } else if (potential_target) {
         client.moveTo(potential_target.x, potential_target.y);
-        console.log("targetting: " + potential_target + ", distance: " + distance_target
-            + ", split_treshhold: " + my_ball.size * 2);
-        relativeSize = ball.size / my_ball.size;
-        if (distance_target < my_ball.size * 2 && 0.1 > relativeSize < 0.4) { // TODO no biggies in the hood
+        var split_threshold = my_ball.size * 4;
+        relativeSize = potential_target.size / my_ball.size;
+        console.log("targetting: " + potential_target.name
+                + ", distance: " + distance_target
+                + ", threshold: " + split_threshold
+                + ", relative size: " + relativeSize
+                + ", balls left: " + client.my_balls.length);
+        if (distance_target < split_threshold && 0.1 > relativeSize < 0.45 && client.my_balls.length < 2) { // TODO no biggies in the hood
             client.split();
         }
     } else {
@@ -207,12 +210,20 @@ client.on('mineBallDestroy', function (ball_id, reason) { //when my ball destroy
         console.log(client.balls[reason.by] + ' ate my ball');
     }
     console.log('i lost my ball ' + ball_id + ', ' + client.my_balls.length + ' balls left');
+    if(client.my_balls.length == 0) {
+        setTimeout(function () {
+            client.spawn("[xFake]Fieldhof");
+        }, 2000);
+    }
 });
 
+
+    /*
 client.on('lostMyBalls', function () { //when i lost all my balls
     client.log('destroy spawning');
     setTimeout(function () {
         client.spawn("[xFake]");
     }, 2000);
 });
+*/
 
